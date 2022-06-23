@@ -97,3 +97,5 @@ clust <- kmeans(ads.model$codes[[1]], 3)
 plot(data.model, type = "codes", bgcol = rainbow(9)[clust$cluster], main = "Cluster Map")
 
 add.cluster.boundaries(ads.model, clust$cluster)
+
+#source : https://algoritmaonline.com/self-organizing-maps/?fbclid=IwAR06N22HNhbcQRtrX_6PA6-RCQJWNEbhKtuSZyEMOgZcfPaTwSL3OUOSR-w
