@@ -11,28 +11,29 @@ library(dplyr)
 #Melihat isi Dataset
 data <- Kuisoner_Penelitian %>% 
   glimpse()
-  
+
 #Menghapus Kolom 'No' dan 'Nama'
-Kuisoner_Penelitian[ , c('No', 'Nama')] <- list(NULL) 
+#Kuisoner_Penelitian[ , c('No', 'Nama')] <- list(NULL) 
 
 #Melihat ringkasan atau statistika deskriptif data kuisoner penelitian
-summary(Kuisoner_Penelitian) 
+summary(data) 
+
 
 #mengubah tipe data yang bukan numeric menjadi numeric
-Kuisoner_Penelitian[] <- lapply(Kuisoner_Penelitian, function(x) {
+data[] <- lapply(data, function(x) {
   if(is.factor(x)) as.numeric(as.character(x)) else x
 })
-sapply(Kuisoner_Penelitian, class)
+sapply(data, class)
 
 #melihat struktur data setelah diubah tipe datanya
-str(Kuisoner_Penelitian)
+str(data)
 
 #melihat dimensi data
-dim(Kuisoner_Penelitian)
+dim(data)
 
 #Melakukan Standarisasi atau Normalisasi untuk Data Training
 # make a train data sets that scaled and convert them to be a matrix cause kohonen function accept numeric matrix
-data.train <- as.matrix(scale(Kuisoner_Penelitian))
+data.train <- as.matrix(scale(data))
 
 # make stable sampling
 RNGkind(sample.kind = "Rounding")
@@ -45,10 +46,10 @@ data.grid
 # make a SOM model
 set.seed(100)
 data.model <- som(data.train, data.grid, rlen = 500, radius = 2.5, keep.data = TRUE,
-                 dist.fcts = "euclidean")
-                 
-# str(data.model)
-#Dari ringkasan ads.model itu kita tahu bahwa grid SOM kita memiliki dimensi 5×5.
+                  dist.fcts = "euclidean")
+
+str(data.model)
+#Dari ringkasan data.model itu kita tahu bahwa grid SOM kita memiliki dimensi 5×5.
 
 #Unsupervised SOM
 #Sebelum memvisualisasikan model SOM, mari kita telusuri daftar model SOM. Jika kita ingin mengetahui posisi data kita di peta, kita lihat di unit.classif. Setiap nilai mewakili nomor simpul tempat aplikasi ini berada. Misalnya pada aplikasi pertama nilai 12 berarti pada aplikasi pertama telah diklasifikasikan menjadi 12 node tertentu.
@@ -58,6 +59,7 @@ head(data.model$unit.classif)
 plot(data.model, type = "mapping", pchs = 19, shape = "round")  
 
 head(data.frame(data.train), 5)
+
 
 plot(data.model, type = "codes", main = "Codes Plot", palette.name = rainbow)
 
@@ -88,7 +90,8 @@ heatmap.som(data.model)
 #Clustering dengan KMeans
 #3 adalah jumlah kluster yang diinginkan
 set.seed(100)
-clust <- kmeans(ads.model$codes[[1]], 3)
+clust <- kmeans(data.model$codes[[1]], 3)
+clust
 
 # clustering using hierarchial
 # cluster.som <- cutree(hclust(dist(data.model$codes[[1]])), 3)
@@ -96,6 +99,38 @@ clust <- kmeans(ads.model$codes[[1]], 3)
 #Visualisasi Hasil Clustering
 plot(data.model, type = "codes", bgcol = rainbow(9)[clust$cluster], main = "Cluster Map")
 
-add.cluster.boundaries(ads.model, clust$cluster)
+add.cluster.boundaries(data.model, clust$cluster)
+
+
+# know cluster each data
+data.cluster <- data.frame(data, cluster = clust$cluster[data.model$unit.classif])
+tail(data.cluster, 10)
 
 #source : https://algoritmaonline.com/self-organizing-maps/?fbclid=IwAR06N22HNhbcQRtrX_6PA6-RCQJWNEbhKtuSZyEMOgZcfPaTwSL3OUOSR-w
+
+# Visualisasi Persentase Tiap Cluster yang Ditemukan
+plotdata <- data.cluster %>%
+  count(cluster) %>%
+  arrange(desc(cluster)) %>%
+  mutate(prop = round(n*100/sum(n), 1),
+         lab.ypos = cumsum(prop) - 0.5*prop)
+
+plotdata$label <- paste0(plotdata$cluster, "\n",
+                         round(plotdata$prop), "%")
+
+ggplot(plotdata, 
+       aes(x = "", 
+           y = prop, 
+           fill = cluster)) +
+  geom_bar(width = 1, 
+           stat = "identity", 
+           color = "black") +
+  geom_text(aes(y = lab.ypos, label = label), 
+            color = "white") +
+  coord_polar("y", 
+              start = 0, 
+              direction = -1) +
+  theme_void() +
+  theme(legend.position = "FALSE") +
+  labs(title = "Percentase Setiap Cluster")
+#source : https://rkabacoff.github.io/datavis/Univariate.html#pie-chart
